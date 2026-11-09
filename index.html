@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Gesture Playground</title>
+
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;overflow:hidden;background:#050912;color:white;font-family:Arial,sans-serif}
+#video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover}
+#scene{position:fixed;inset:0;pointer-events:none}
+#scene canvas{width:100%;height:100%;display:block}
+#hud{position:fixed;inset:0;pointer-events:none}
+#header{position:absolute;top:15px;left:14px;right:14px;display:flex;justify-content:space-between;align-items:center}
+#title{font-size:15px;font-weight:900;letter-spacing:1.5px;text-shadow:0 2px 7px black}
+#status{background:#071322dd;border:1px solid #36caff;border-radius:20px;padding:8px 11px;font-size:11px}
+#helpButton{position:absolute;top:65px;right:15px;width:42px;height:42px;border:1px solid #54d5ff;background:#071525dd;color:white;border-radius:50%;font-size:22px;font-weight:bold;pointer-events:auto}
+#help{display:none;position:absolute;top:115px;right:14px;width:min(260px,80vw);padding:14px;border:1px solid #38bfff99;border-radius:14px;background:#06101df2;backdrop-filter:blur(12px);pointer-events:auto;box-shadow:0 5px 25px #0009}
+#help.open{display:block}
+#helpHead{display:flex;justify-content:space-between;align-items:center;color:#62dfff;font-size:12px;font-weight:bold;letter-spacing:1px;margin-bottom:10px}
+#closeHelp{border:0;background:transparent;color:white;font-size:22px;padding:0 5px}
+.gestureRow{display:flex;align-items:center;gap:11px;margin:9px 0;font-size:12px}
+.gestureIcon{width:34px;height:34px;flex-shrink:0;filter:drop-shadow(0 0 5px #00bfff88)}
+.gestureRow strong{color:#62dfff}
+#gesture{position:absolute;bottom:82px;width:100%;text-align:center;font-size:14px;font-weight:bold;text-shadow:0 2px 8px black}
+#count{position:absolute;bottom:68px;left:14px;padding:9px 12px;border:1px solid #39caff88;border-radius:20px;background:#071525dd;font-size:12px}
+#count svg{width:18px;height:18px;vertical-align:middle;margin-right:5px}
+#bottom{position:absolute;bottom:17px;left:0;right:0;display:flex;justify-content:center;gap:10px;pointer-events:auto}
+.control{display:flex;align-items:center;gap:7px;padding:12px 16px;border:1px solid #45caff88;border-radius:30px;background:#071525ee;color:white;font-size:12px;font-weight:bold}
+.control svg{width:19px;height:19px}
+#overlay{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:25px;background:#050912f5}
+#overlay.hidden{display:none}
+#panel{width:100%;max-width:370px;text-align:center}
+#panelLogo{width:90px;height:90px;margin-bottom:15px;filter:drop-shadow(0 0 20px #00bfff77)}
+#panel h1{font-size:26px;letter-spacing:2px}
+#panel p{color:#b8c8dc;font-size:14px;line-height:1.6;margin-bottom:25px}
+#start{width:100%;padding:18px;border:0;border-radius:14px;background:linear-gradient(110deg,#087cff,#00caff);color:white;font-size:16px;font-weight:900}
+#start:disabled{opacity:.5}
+#message{color:#9aaec4;font-size:12px;line-height:1.5;margin-top:17px}
+</style>
+</head>
+
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+<defs>
+<linearGradient id="skin" x1="0" y1="0" x2="1" y2="1">
+<stop stop-color="#fff0c9"/><stop offset=".55" stop-color="#ffb96e"/><stop offset="1" stop-color="#ed7956"/>
+</linearGradient>
+<linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+<stop stop-color="#72edff"/><stop offset="1" stop-color="#2785ff"/>
+</linearGradient>
+
+<symbol id="openHand" viewBox="0 0 100 100">
+<path d="M30 87L25 69 13 53Q8 44 16 39Q22 36 27 43L35 52 34 16Q34 7 42 7Q50 7 50 16L50 43 52 11Q53 3 61 4Q69 5 68 14L67 44 72 20Q74 12 82 15Q89 18 86 26L79 52 84 43Q89 37 95 42Q101 48 94 57L79 79Q70 92 54 93Z" fill="url(#skin)" stroke="#ffe1bc" stroke-width="3"/>
+</symbol>
+
+<symbol id="fistHand" viewBox="0 0 100 100">
+<path d="M18 47Q12 39 20 31L28 24Q33 18 41 23L49 17Q57 12 64 21L73 21Q82 20 84 31L89 43 85 66Q83 86 64 90L35 87Q20 83 18 66Z" fill="url(#skin)" stroke="#ffe1bc" stroke-width="3"/>
+<path d="M20 47Q30 39 41 44L53 44Q65 42 76 48M28 29L40 41M48 22L56 41" fill="none" stroke="#d87556" stroke-width="3"/>
+</symbol>
+
+<symbol id="pinchHand" viewBox="0 0 100 100">
+<path d="M24 89Q13 80 19 68L35 47 48 27Q53 18 61 24Q67 29 61 38L52 52 68 38Q77 31 83 39Q88 47 79 54L60 75Q48 93 24 89Z" fill="url(#skin)" stroke="#ffe1bc" stroke-width="3"/>
+<circle cx="53" cy="49" r="7" fill="url(#blue)" stroke="white" stroke-width="2"/>
+</symbol>
+
+<symbol id="pointHand" viewBox="0 0 100 100">
+<path d="M35 87L23 76Q15 68 21 59L32 48 29 16Q29 7 38 7Q47 7 47 17L49 45 69 41Q78 39 81 47Q84 55 75 60L63 83Q52 96 35 87Z" fill="url(#skin)" stroke="#ffe1bc" stroke-width="3"/>
+</symbol>
+
+<symbol id="peaceHand" viewBox="0 0 100 100">
+<path d="M33 89Q20 81 24 68L35 45 31 15Q30 7 39 6Q48 6 49 15L53 45 61 14Q64 6 72 10Q80 13 77 22L68 53 79 43Q86 37 92 45Q97 52 88 60L69 82Q53 97 33 89Z" fill="url(#skin)" stroke="#ffe1bc" stroke-width="3"/>
+</symbol>
+
+<symbol id="orbIcon" viewBox="0 0 100 100">
+<path d="M50 5L89 28V73L50 95 11 73V28Z" fill="url(#blue)" stroke="#c9f5ff" stroke-width="3"/>
+<path d="M11 28L50 50 89 28M50 50V95" fill="none" stroke="white" stroke-width="3"/>
+</symbol>
+
+<symbol id="resetIcon" viewBox="0 0 100 100">
+<path d="M80 36A35 35 0 1 0 84 62" fill="none" stroke="url(#blue)" stroke-width="10" stroke-linecap="round"/>
+<path d="M65 12L88 36 57 40" fill="none" stroke="#8ceaff" stroke-width="8" stroke-linecap="round"/>
+</symbol>
+</defs>
+</svg>
+
+<video id="video" autoplay muted playsinline></video>
+<div id="scene"></div>
+
+<div id="hud">
+    <div id="header">
+        <div id="title">GESTURE PLAYGROUND</div>
+        <div id="status">CAMERA OFF</div>
+    </div>
+
+    <button id="helpButton">?</button>
+
+    <div id="help">
+        <div id="helpHead">
+            HAND GESTURES
+            <button id="closeHelp">×</button>
+        </div>
+
+        <div class="gestureRow">
+            <svg class="gestureIcon"><use href="#openHand"/></svg>
+            <span><strong>OPEN HAND</strong><br>Spawn orb</span>
+        </div>
+        <div class="gestureRow">
+            <svg class="gestureIcon"><use href="#fistHand"/></svg>
+            <span><strong>FIST</strong><br>Grab orb</span>
+        </div>
+        <div class="gestureRow">
+            <svg class="gestureIcon"><use href="#pinchHand"/></svg>
+            <span><strong>PINCH</strong><br>Manual resize</span>
+        </div>
+        <div class="gestureRow">
+            <svg class="gestureIcon"><use href="#pointHand"/></svg>
+            <span><strong>POINT</strong><br>Move orb</span>
+        </div>
+        <div class="gestureRow">
+            <svg class="gestureIcon"><use href="#peaceHand"/></svg>
+            <span><strong>PEACE</strong><br>Change color</span>
+        </div>
+        <div style="font-size:11px;color:#9bb7cb;margin-top:12px">
+            Move your hand closer or farther to change orb size automatically.
+        </div>
+    </div>
+
+    <div id="count">
+        <svg><use href="#orbIcon"/></svg>
+        ORBS: <span id="orbCount">0</span>
+    </div>
+
+    <div id="gesture">Press START EXPERIENCE</div>
+
+    <div id="bottom">
+        <button class="control" id="add">＋ ADD ORB</button>
+        <button class="control" id="clear">
+            <svg><use href="#resetIcon"/></svg> RESET
+        </button>
+    </div>
+</div>
+
+<div id="overlay">
+    <div id="panel">
+        <svg id="panelLogo" viewBox="0 0 100 100">
+            <use href="#orbIcon"/>
+        </svg>
+        <h1>GESTURE PLAYGROUND</h1>
+        <p>Control glowing 3D objects using your hand gestures.</p>
+        <button id="start">START EXPERIENCE</button>
+        <div id="message">Allow camera access to begin. Internet connection required.</div>
+    </div>
+</div>
+
+<script>
+const video=document.getElementById("video");
+const sceneElement=document.getElementById("scene");
+const startButton=document.getElementById("start");
+const message=document.getElementById("message");
+const gestureText=document.getElementById("gesture");
+const statusText=document.getElementById("status");
+const countText=document.getElementById("orbCount");
+
+let scene,camera,renderer,hands,stream;
+let active=false,processing=false;
+let orbs=[],selectedOrb=null;
+let previousGesture="NONE";
+let lastSpawn=0,lastColor=0,colorIndex=0;
+
+// Automatic distance tracking
+let handReferenceSize=null;
+let currentHandScale=1;
+let handWasVisible=false;
+
+const colors=[0x00caff,0xff3d9a,0x9d65ff,0x5dffad,0xffc04d,0xffffff];
+
+document.getElementById("helpButton").onclick=()=>{
+    document.getElementById("help").classList.toggle("open");
+};
+document.getElementById("closeHelp").onclick=()=>{
+    document.getElementById("help").classList.remove("open");
+};
+
+function loadScript(src){
+    return new Promise((resolve,reject)=>{
+        const s=document.createElement("script");
+        s.src=src;
+        s.onload=resolve;
+        s.onerror=()=>reject(new Error("Library download failed."));
+        document.head.appendChild(s);
+    });
+}
+
+function setupScene(){
+    scene=new THREE.Scene();
+    camera=new THREE.OrthographicCamera(
+        -innerWidth/2,innerWidth/2,innerHeight/2,-innerHeight/2,.1,100
+    );
+    camera.position.z=10;
+
+    renderer=new THREE.WebGLRenderer({alpha:true,antialias:true});
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    renderer.setSize(innerWidth,innerHeight);
+    sceneElement.appendChild(renderer.domElement);
+
+    scene.add(new THREE.AmbientLight(0xffffff,1.8));
+
+    const light=new THREE.PointLight(0xffffff,3);
+    light.position.set(0,100,100);
+    scene.add(light);
+
+    window.addEventListener("resize",resizeScene);
+    animate();
+}
+
+function resizeScene(){
+    if(!camera||!renderer)return;
+    camera.left=-innerWidth/2;
+    camera.right=innerWidth/2;
+    camera.top=innerHeight/2;
+    camera.bottom=-innerHeight/2;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);
+}
+
+function handPosition(x,y){
+    return new THREE.Vector3(
+        (x-.5)*innerWidth,
+        (.5-y)*innerHeight,
+        0
+    );
+}
+
+// Estimate relative distance using palm width.
+// Larger apparent palm = hand closer to camera.
+function getHandDistanceScale(points){
+    const palmWidth=Math.hypot(
+        points[5].x-points[17].x,
+        points[5].y-points[17].y
+    );
+
+    if(!handReferenceSize){
+        handReferenceSize=palmWidth;
+    }
+
+    const scale=palmWidth/handReferenceSize;
+
+    return Math.max(.35,Math.min(2.8,scale));
+}
+
+function updateCount(){
+    countText.textContent=orbs.length;
+}
+
+function spawnOrb(x=.5,y=.5){
+    const group=new THREE.Group();
+
+    const geometry=new THREE.IcosahedronGeometry(42,2);
+    const material=new THREE.MeshStandardMaterial({
+        color:colors[colorIndex],
+        emissive:colors[colorIndex],
+        emissiveIntensity:.7,
+        metalness:.3,
+        roughness:.2
+    });
+
+    const main=new THREE.Mesh(geometry,material);
+    group.add(main);
+
+    const ring=new THREE.Mesh(
+        new THREE.TorusGeometry(57,2.5,10,80),
+        new THREE.MeshBasicMaterial({color:colors[colorIndex]})
+    );
+
+    ring.rotation.x=1.1;
+    group.add(ring);
+
+    group.position.copy(handPosition(x,y));
+    group.userData.main=main;
+    group.userData.ring=ring;
+    group.userData.floatOffset=Math.random()*10;
+
+    scene.add(group);
+    orbs.push(group);
+    selectedOrb=group;
+    updateCount();
+}
+
+function clearOrbs(){
+    for(const orb of orbs){
+        scene.remove(orb);
+        orb.traverse(obj=>{
+            if(obj.geometry)obj.geometry.dispose();
+            if(obj.material)obj.material.dispose();
+        });
+    }
+    orbs=[];
+    selectedOrb=null;
+    updateCount();
+}
+
+function changeColor(){
+    colorIndex=(colorIndex+1)%colors.length;
+
+    for(const orb of orbs){
+        orb.userData.main.material.color.setHex(colors[colorIndex]);
+        orb.userData.main.material.emissive.setHex(colors[colorIndex]);
+        orb.userData.ring.material.color.setHex(colors[colorIndex]);
+    }
+}
+
+function fingerUp(p,tip,pip){
+    return p[tip].y<p[pip].y;
+}
+
+function distance(a,b){
+    return Math.hypot(a.x-b.x,a.y-b.y);
+}
+
+function detectGesture(p){
+    const index=fingerUp(p,8,6);
+    const middle=fingerUp(p,12,10);
+    const ring=fingerUp(p,16,14);
+    const pinky=fingerUp(p,20,18);
+    const pinch=distance(p[4],p[8])<.055;
+
+    if(pinch)return "PINCH";
+    if(index&&middle&&!ring&&!pinky)return "PEACE";
+    if(index&&!middle&&!ring&&!pinky)return "POINT";
+    if(index&&middle&&ring&&pinky)return "OPEN";
+    if(!index&&!middle&&!ring&&!pinky)return "FIST";
+
+    return "NONE";
+}
+
+function handleHand(results){
+    if(!results.multiHandLandmarks||!results.multiHandLandmarks.length){
+        previousGesture="NONE";
+        handWasVisible=false;
+        handReferenceSize=null;
+        gestureText.textContent="SHOW YOUR HAND";
+        statusText.textContent="HAND NOT FOUND";
+        return;
+    }
+
+    const p=results.multiHandLandmarks[0];
+    const gesture=detectGesture(p);
+    const tip=p[8];
+
+    const position=handPosition(tip.x,tip.y);
+
+    // Calibrate a fresh hand reference when a hand first appears.
+    if(!handWasVisible){
+        handReferenceSize=null;
+        handWasVisible=true;
+    }
+
+    currentHandScale=getHandDistanceScale(p);
+
+    statusText.textContent="CAMERA ON";
+
+    // Instant position and distance-based scale.
+    if(selectedOrb){
+        selectedOrb.position.copy(position);
+        selectedOrb.scale.setScalar(currentHandScale);
+    }
+
+    if(gesture==="OPEN"){
+        gestureText.textContent="OPEN HAND — SPAWN ORB";
+
+        if(previousGesture!=="OPEN"&&Date.now()-lastSpawn>900){
+            spawnOrb(tip.x,tip.y);
+            lastSpawn=Date.now();
+            selectedOrb.scale.setScalar(currentHandScale);
+        }
+    }
+    else if(gesture==="FIST"){
+        gestureText.textContent="FIST — GRAB ORB";
+    }
+    else if(gesture==="PINCH"){
+        gestureText.textContent="PINCH — RESIZE ORB";
+
+        if(selectedOrb){
+            const amount=distance(p[4],p[8]);
+            const pinchScale=Math.max(.35,Math.min(2.8,amount*30));
+
+            selectedOrb.scale.setScalar(pinchScale);
+        }
+    }
+    else if(gesture==="POINT"){
+        gestureText.textContent="POINT — MOVE ORB";
+    }
+    else if(gesture==="PEACE"){
+        gestureText.textContent="PEACE — CHANGE COLOR";
+
+        if(previousGesture!=="PEACE"&&Date.now()-lastColor>700){
+            changeColor();
+            lastColor=Date.now();
+        }
+    }
+    else{
+        gestureText.textContent="MOVE YOUR HAND";
+    }
+
+    previousGesture=gesture;
+}
+
+async function handLoop(){
+    if(!active)return;
+
+    if(!processing&&video.readyState>=2&&hands){
+        processing=true;
+        try{
+            await hands.send({image:video});
+        }catch(e){
+            console.warn(e);
+        }
+        processing=false;
+    }
+
+    requestAnimationFrame(handLoop);
+}
+
+function animate(){
+    requestAnimationFrame(animate);
+    if(!renderer)return;
+
+    const t=performance.now()*.001;
+
+    for(const orb of orbs){
+        orb.rotation.x+=.008;
+        orb.rotation.y+=.014;
+        orb.userData.ring.rotation.z+=.012;
+
+        // No position or scale smoothing here.
+        // Hand controls update them immediately.
+        orb.position.y+=Math.sin(t*2+orb.userData.floatOffset)*.12;
+    }
+
+    renderer.render(scene,camera);
+}
+
+async function startExperience(){
+    if(active)return;
+
+    if(!navigator.mediaDevices?.getUserMedia){
+        message.textContent="Camera access requires HTTPS.";
+        return;
+    }
+
+    startButton.disabled=true;
+    startButton.textContent="STARTING...";
+
+    try{
+        stream=await navigator.mediaDevices.getUserMedia({
+            audio:false,
+            video:{
+                facingMode:{ideal:"environment"},
+                width:{ideal:1280},
+                height:{ideal:720}
+            }
+        });
+
+        video.srcObject=stream;
+        await video.play();
+
+        message.textContent="Loading 3D engine...";
+
+        await loadScript(
+            "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"
+        );
+
+        setupScene();
+
+        message.textContent="Loading hand tracking...";
+
+        await loadScript(
+            "https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"
+        );
+
+        hands=new Hands({
+            locateFile:file=>
+                "https://cdn.jsdelivr.net/npm/@mediapipe/hands/"+file
+        });
+
+        hands.setOptions({
+            maxNumHands:1,
+            modelComplexity:1,
+            minDetectionConfidence:.65,
+            minTrackingConfidence:.6
+        });
+
+        hands.onResults(handleHand);
+
+        active=true;
+
+        document.getElementById("overlay").classList.add("hidden");
+
+        statusText.textContent="CAMERA ON";
+        gestureText.textContent="SHOW YOUR HAND";
+
+        handLoop();
+
+    }catch(error){
+        console.error(error);
+
+        if(stream){
+            stream.getTracks().forEach(t=>t.stop());
+            stream=null;
+        }
+
+        startButton.disabled=false;
+        startButton.textContent="TRY AGAIN";
+
+        message.textContent="Could not start: "+error.message+
+            ". Check camera permission and internet.";
+    }
+}
+
+startButton.addEventListener("click",startExperience);
+
+document.getElementById("add").onclick=()=>{
+    if(scene)spawnOrb(.3+Math.random()*.4,.3+Math.random()*.4);
+};
+
+document.getElementById("clear").onclick=clearOrbs;
+</script>
+
+</body>
+</html>
